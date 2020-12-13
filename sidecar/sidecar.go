@@ -5,11 +5,32 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
+
+var (
+	devices = "eth0"
+
+	ruleNotExist             = "Cannot delete qdisc with handle of zero."
+	ruleNotExistLowerVersion = "RTNETLINK answers: No such file or directory"
+)
+
+// HandlerUpdateDevices handler update devices
+func HandlerUpdateDevices(c *gin.Context) {
+	val, ok := c.Params.Get("devices")
+	if !ok {
+		c.JSON(400, gin.H{
+			"error": "required params of device",
+		})
+	}
+	devices = val
+	c.Status(204)
+}
 
 // HandlerLatency handler latency
 func HandlerLatency(c *gin.Context) {
@@ -24,9 +45,45 @@ func HandlerLatency(c *gin.Context) {
 	defer cancel()
 
 	log, err := delay(ctx, val)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": err,
+			"log":   log,
+		})
+	}
 	c.JSON(200, gin.H{
-		"error": err,
-		"log":   log,
+		"log": log,
+	})
+}
+
+// HandlerShow handler show
+func HandlerShow(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c, time.Second*10)
+	defer cancel()
+
+	log, err := show(ctx)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": err,
+			"log":   log,
+		})
+	}
+	c.JSON(200, gin.H{
+		"log": log,
+	})
+}
+
+// HandlerReset handler reset
+func HandlerReset(c *gin.Context) {
+	log, err := reset(c)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": err,
+			"log":   log,
+		})
+	}
+	c.JSON(200, gin.H{
+		"log": log,
 	})
 }
 
@@ -43,9 +100,9 @@ func run(ctx context.Context, args []string) (string, error) {
 
 	cmd := exec.CommandContext(ctx, "tc", args...)
 
-	log := bytes.NewBufferString("")
-	cmd.Stdout = log
-	cmd.Stderr = log
+	log := bytes.Buffer{}
+	cmd.Stdout = &log
+	cmd.Stderr = &log
 	cmd.SysProcAttr = sysProcAttr
 	cmd.Env = environments
 	if err := cmd.Start(); err != nil {
@@ -77,12 +134,27 @@ func run(ctx context.Context, args []string) (string, error) {
 	}
 }
 
-func show() {
+func show(ctx context.Context) (string, error) {
+	return run(ctx, []string{"qdisc", "show"})
+}
 
+func reset(ctx context.Context) (string, error) {
+	log, err := run(ctx, []string{"qdisc", "del", "dev", devices, "root"})
+	if err != nil {
+		if (!strings.Contains(string(log), ruleNotExistLowerVersion)) && (!strings.Contains(string(log), ruleNotExist)) {
+			logrus.WithField("tc", "del").Error(err)
+			return log, err
+		}
+	}
+	return log, nil
 }
 
 func delay(ctx context.Context, value string) (string, error) {
-	return run(ctx, []string{"qdisc", "add", "dev", "eth0", "root", "netem", "delay", value})
+	log, err := reset(ctx)
+	if err != nil {
+		return log, err
+	}
+	return run(ctx, []string{"qdisc", "add", "dev", devices, "root", "netem", "delay", value})
 }
 
 func duplicate() {
