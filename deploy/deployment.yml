@@ -1,0 +1,144 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: kntool
+  labels:
+    app: kntool
+webhooks:
+  - name: mutating-kntool.loulan.me
+    clientConfig:
+      service:
+        name: kntool
+        namespace: "kntool"
+        path: "/mutate"
+      caBundle: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURvRENDQW9pZ0F3SUJBZ0lVTDlUZ2pURUNwSWx1Sy8xV0p6ZU1haXVUTjVrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd2FERUxNQWtHQTFVRUJoTUNWVk14RHpBTkJnTlZCQWdUQms5eVpXZHZiakVSTUE4R0ExVUVCeE1JVUc5eQpkR3hoYm1ReEV6QVJCZ05WQkFvVENrdDFZbVZ5Ym1WMFpYTXhDekFKQmdOVkJBc1RBa05CTVJNd0VRWURWUVFECkV3cExkV0psY201bGRHVnpNQjRYRFRJd01USXhNakUzTlRnd01Gb1hEVEkxTVRJeE1URTNOVGd3TUZvd2FERUwKTUFrR0ExVUVCaE1DVlZNeER6QU5CZ05WQkFnVEJrOXlaV2R2YmpFUk1BOEdBMVVFQnhNSVVHOXlkR3hoYm1ReApFekFSQmdOVkJBb1RDa3QxWW1WeWJtVjBaWE14Q3pBSkJnTlZCQXNUQWtOQk1STXdFUVlEVlFRREV3cExkV0psCmNtNWxkR1Z6TUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF6eHE5UDJ2SlNNYVIKOG8rT3VLczA5TVNZTWhaQzhIdFVVWk85MkRTam1yR3FPNFo3eU5qTWJ1a1JqbTBPWlJkeTNIYXJiMjlINkJRQgpZNXhhenNTNEpPRTdqa0puZDJlOXJza0kzTzh5aXJYK1g4a2xVMmF0ZVRnSkFNVjFFYVpLVlB0YVpvZjZIK0pOCkdrU09OYk91ZHhPUmJHZW1NZ1hxMUU3RENzSHVsUXB6L0hLUDNweG9kcDZyaTNsZy9DUXlFS0E3U0E0bDltbjUKWWlJbFJ4cUp5dG1INzRvekpjQlBNcjFyVEdmNm5UOXlJcmdNYmZjTStPQk9yWEkzd2lHVFpiL3FDQjBjeFpySAp4dDFtTzJZK2RaTDBIT3FWUkZWQ1lIRVkvZVdPb1BNNWR3RE5BWUkxdWlHMFV5U0NnK1U5WnExL3MyRjU1UHBpClluVkpKa3ZjZ1FJREFRQUJvMEl3UURBT0JnTlZIUThCQWY4RUJBTUNBUVl3RHdZRFZSMFRBUUgvQkFVd0F3RUIKL3pBZEJnTlZIUTRFRmdRVXpjVFZISWNzcTdaWGdaV243Nkp3QmFTWFF1SXdEUVlKS29aSWh2Y05BUUVMQlFBRApnZ0VCQUdDdkxsMUxPQTFVZ3hjZEprTHV1SGd2RGNaSDk1bFNCbEpCR0w4VGdUb1IxaXI1ZzRTdjQ2NG1nVytTCkw4aS95TDNrSFZtRmtRMld6ZEVGZklIMzhwUFhROXpYV2FHVWxIYitxNzBvTU1nWW9Na2tZOTk2MEZxM0xUckYKaXdHeC9jdTB3Y0tBRTBCQmZxdHZHUWdoUGRyRnJNc0tGSmp5R1luL3UrYXFOc0U3NFc4V1IvZFZzT3hoU0xoWgpycTU5QnV5MEZ4NFY4ZEtiRXhwd1BqN3dPYlJURmZLdkt5TDcyZHZFU09KWVhwQ1pjQ0xUdE0vT3FaWDBsSGwwCnJudGpoMkVqUjN6L29vLzMya1FGdlVQc0UxVXdiNXpHcUxmM09HZnQ3STJWOWpBNUNOOFFIZXJpNmdOK2NuSVEKREdqY1dhNEtUTVpQOFlkSjdTcDhrV1dFRDY0PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
+    rules:
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    namespaceSelector:
+      matchLabels:
+        kntool-inject: enabled
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
+    timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kntool
+spec: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kntool
+  namespace: kntool
+spec:
+  selector:
+    app: kntool
+  ports:
+    - port: 443
+      targetPort: webhook-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kntool
+  namespace: kntool
+spec:
+  selector:
+    matchLabels:
+      app: kntool
+  template:
+    metadata:
+      labels:
+        app: kntool
+    spec:
+      containers:
+        - name: kntool
+          image: "zhaihuailou/kntool:latest"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+              name: webhook-api
+          volumeMounts:
+            - name: config
+              mountPath: "/config"
+              # readOnly: true
+          args:
+            - kntool
+            - -cert-file
+            - /config/server.crt
+            - -key-file
+            - /config/server.key
+      volumes:
+        - name: config
+          configMap:
+            name: kntool-config
+            items:
+              - key: "cert"
+                path: "server.crt"
+              - key: "key"
+                path: "server.key"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "kntool-config"
+  namespace: kntool
+data:
+  cert: |
+    -----BEGIN CERTIFICATE-----
+    MIIEBDCCAuygAwIBAgIUU5iMlVQ+mTNua0N2U6ysb41W1xAwDQYJKoZIhvcNAQEL
+    BQAwaDELMAkGA1UEBhMCVVMxDzANBgNVBAgTBk9yZWdvbjERMA8GA1UEBxMIUG9y
+    dGxhbmQxEzARBgNVBAoTCkt1YmVybmV0ZXMxCzAJBgNVBAsTAkNBMRMwEQYDVQQD
+    EwpLdWJlcm5ldGVzMB4XDTIwMTIxMjE4MDAwMFoXDTIxMTIxMjE4MDAwMFowbzEL
+    MAkGA1UEBhMCVVMxDzANBgNVBAgTBk9yZWdvbjERMA8GA1UEBxMIUG9ydGxhbmQx
+    EzARBgNVBAoTCkt1YmVybmV0ZXMxEzARBgNVBAsTCkt1YmVybmV0ZXMxEjAQBgNV
+    BAMTCWFkbWlzc2lvbjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALGp
+    aFdXdugGG+SZCrMfQTLUn9MxKdSqqDFJdU9lxZKcgH/GaAwVm5miiSYurqY+eaYD
+    MILdV4dZjh7adcJA1yjNvPQq7NmYx2HKBrmn4JEtsScFyy/m3ncgQUU0SqYBOQWc
+    JofY40WOEE4n4NYhdrsLsshrXYfK92vjKlIH8zKQw8r9T2Zvfaj5CVDBwBnVqqwm
+    3zuhFTvwcvZQsEjhw6IORB3w0rNQ9WzBoXryXBnXA22REjpS2DjDXpbN2oYrZ7KF
+    Q47zoupUpm/3YWr4c1VGz/61/DHnJMcYoi9GtNYNGWTYvAxmaQlzlAajoL3HAUfi
+    AxPGL1XAZti5wJoI3jMCAwEAAaOBnjCBmzAOBgNVHQ8BAf8EBAMCBaAwHQYDVR0l
+    BBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYE
+    FJa8NFWTc5E+SOzRqgOhigN28ZHzMB8GA1UdIwQYMBaAFM3E1RyHLKu2V4GVp++i
+    cAWkl0LiMBwGA1UdEQQVMBOCEWtudG9vbC5rbnRvb2wuc3ZjMA0GCSqGSIb3DQEB
+    CwUAA4IBAQAUQSBNhilRo+e7XpTP7uyKXkIqd0McmcnRk9rcrMb+IL08J5SKxp9P
+    KZqErIo1PTzHyKuNWJXGQ9R8hV4bC9HyR1VCSE62EdqqsFtdO5/A6/P96bawm1q/
+    rutqoCICidrg9N3o3xlNgMtgUZGIIKr0j+kBiKhorxOOx5pxa39yvMSZ2w28+v1l
+    kEEwKvC6izT7b3+4ZAyXFHO3aZrWCvSY8YWumM6+8RLT7pmppSxnj8KSM0Rv9hnH
+    db+7ZT8squitF4Zzf5axlGjXYgNduGcUDb8wOAvqU0PRj6f5TSWKMbfJ1QS9Q93c
+    GGsqReszbqm/kS4Y6sLPrmwo6xcz1CXc
+    -----END CERTIFICATE-----
+  key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEpQIBAAKCAQEAsaloV1d26AYb5JkKsx9BMtSf0zEp1KqoMUl1T2XFkpyAf8Zo
+    DBWbmaKJJi6upj55pgMwgt1Xh1mOHtp1wkDXKM289Crs2ZjHYcoGuafgkS2xJwXL
+    L+bedyBBRTRKpgE5BZwmh9jjRY4QTifg1iF2uwuyyGtdh8r3a+MqUgfzMpDDyv1P
+    Zm99qPkJUMHAGdWqrCbfO6EVO/By9lCwSOHDog5EHfDSs1D1bMGhevJcGdcDbZES
+    OlLYOMNels3ahitnsoVDjvOi6lSmb/dhavhzVUbP/rX8MeckxxiiL0a01g0ZZNi8
+    DGZpCXOUBqOgvccBR+IDE8YvVcBm2LnAmgjeMwIDAQABAoIBADiBVPpSizMInl56
+    fnix/B6amaql/FPzY0MpxfHWwJv8wrHg/L67MJ4Qn+ZQ+qNNQ4uVgBxfIbOevCD8
+    AnAiB0ynAu31qRccDG4Bv1nVFwuVqL5sjU9S8naY/6lvFD7wLJ6oJ2kVhlNc97qj
+    3FK+mfCrq9UqsLi7yS27Nn6YoLT35iQXwxlP5tY+iEaF67M9bob5SVrXDy3GfORq
+    6SQVOOaV0D8tOSxpyZYHMoYotvJZ1h7194MlMh4wC60QFHphJCLylC1XEBa3AHmi
+    ABD/t8+yBZjQt10Ef+Ig4baVIjhyYVmCo9AAeMGZXlW+M5hz7goqgPJfbOWkR1Mh
+    3FAWwYECgYEAyJeiBIK38yMgiNJPwD9C7S6mOASRR7V4UGsFXqfFa1bU4DVdpMuG
+    JaZy5MvZAD0Qq/2Uq55v3IYQaBbzWIOfuBKzMwOH8RKbfqhpX1J2QQhyV1fOFzDV
+    rF4/Zfvi5r7157w5OBsr9xvEQIgDb9EMYwM1iemOx2QwvgACfA5Jo5ECgYEA4rxM
+    g+mf3DHF2hadAdqPLm2J4o8K9q7t6InrzBDYY/B0HHdFNfEwL1QgjRA7cHVBQEn1
+    71C2wOaZfgbbbB5ITV6YjD87+ZhcXV59ufDRFZFwCkc6OpxotWSQrT+J0cFbXCed
+    uwe5k3TnrOqZl3gO/M/LVfq0yWXtoJm4gLPL+4MCgYEAplh411y/xzV+KXifAkJz
+    8dUZqqK/B8SJvcbCcTiYEuezKSuYOK0+1cIuzWXu0q/RP4/O1nNROINE380IiIK+
+    1RtM2CU5esV/hY2LtKzhvBSRHbWHBtxMleCimqRECi6aJk6E9O4zi3zPRuSEVRn7
+    N7DVmUTCTr/bW/UOGmqOzsECgYEAyyeOo29UFjbeoS871Opg+meZcU9bsnZAoufZ
+    SAob6UgMsWjIsbF+zBlj5SETMQtOwOzEGH7IkQTNqRc5yaFEhVZp9te9xEEZGWvN
+    2SoGHX4n1n3FlbiJNWZ7H1BcC35lfqfcczVTuOS5pLy7i/U98JW7CjnNfNsAVLMH
+    lwIClkMCgYEAslZM0lTyTKTuoK3X/pAtT+aGN4SonPiY+T2A2nhf5iuT8hDYENMK
+    5/SBtTIdnOQk7p2txN93bynu8ufWciw6kL8lmxNQ23uzUasIvxz93jSv2sfKxLeY
+    NSxztZsupda/JTYx7d+55DPaeSvAYLDfBtzgJC10eu0/mjSvQJMPf+I=
+    -----END RSA PRIVATE KEY-----
