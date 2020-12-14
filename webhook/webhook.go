@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"kntool/config"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	admissionV1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -147,43 +147,17 @@ func createPatch(pod *corev1.Pod) ([]byte, error) {
 }
 
 func addSidecar(target []corev1.Container) (patch []patchOperation) {
-	sidecar := corev1.Container{
-		Name:  "kntool-sidecar",
-		Image: "zhaihuailou/kntool-sidecar",
-		Ports: []corev1.ContainerPort{{
-			ContainerPort: 2332,
-		}},
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{
-					"NET_ADMIN",
-				},
-			},
-		},
-		Resources: corev1.ResourceRequirements{
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("0.2"),
-				corev1.ResourceMemory: resource.MustParse("200Mi"),
-			},
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("0.2"),
-				corev1.ResourceMemory: resource.MustParse("200Mi"),
-			},
-		},
-		ImagePullPolicy: "IfNotPresent",
-	}
-
 	var find bool
 
 	for i, container := range target {
 		if container.Name == "kntool-sidercar" {
-			target[i] = sidecar
+			target[i] = config.GetConf().Sidecar()
 			find = true
 		}
 	}
 
 	if !find {
-		target = append(target, sidecar)
+		target = append(target, config.GetConf().Sidecar())
 	}
 
 	patch = append(patch, patchOperation{

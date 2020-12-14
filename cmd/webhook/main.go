@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 
+	"kntool/config"
 	"kntool/webhook"
 
 	"github.com/gin-gonic/gin"
@@ -12,8 +13,8 @@ import (
 var (
 	certFile     = flag.String("cert-file", "server.crt", "Cert file")
 	keyFile      = flag.String("key-file", "server.pem", "Key file")
-	sidecarImage = flag.String("sidecar-image", "daocloud.io/loulan/kntool-sidecar:latest", "Sidecar image")
-	sidecarPort  = flag.String("sidecar-port", "2332", "Sidecar port")
+	sidecarImage = flag.String("sidecar-image", "zhaihuailou/kntool-sidecar:latest", "Sidecar image")
+	sidecarPort  = flag.Int("sidecar-port", 2332, "Sidecar port")
 )
 
 func main() {
@@ -21,6 +22,12 @@ func main() {
 	if *certFile == "" || *keyFile == "" {
 		logrus.Fatal("Run 'kntool --help' for usage.")
 	}
+
+	conf := &config.Config{
+		SidecarImage: *sidecarImage,
+		SidecarPort:  int32(*sidecarPort),
+	}
+	config.Init(conf)
 
 	r := gin.Default()
 	r.POST("/mutate", webhook.HandlerMutate)
