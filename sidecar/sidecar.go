@@ -126,9 +126,6 @@ func run(ctx context.Context, args []string) (string, error) {
 				return log.String(), err
 			}
 		case err := <-errCh:
-			if done == nil {
-				return log.String(), ctx.Err()
-			}
 			return log.String(), err
 		}
 	}
